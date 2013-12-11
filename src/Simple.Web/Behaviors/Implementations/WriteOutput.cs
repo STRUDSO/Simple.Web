@@ -1,4 +1,6 @@
-﻿namespace Simple.Web.Behaviors.Implementations
+﻿using System.Threading.Tasks;
+
+namespace Simple.Web.Behaviors.Implementations
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -44,7 +46,7 @@
 
                 context.Response.WriteFunction = (stream) =>
                     {
-                        var content = new Content(context.Request.Url, handler, handler.Output);
+                        var content = new Content(context.Request.Url, handler, handler.Output, context);
                         return mediaTypeHandler.Write<T>(content, stream);
                     };
             }
@@ -79,8 +81,14 @@
             {
                 context.Response.WriteFunction = (stream) =>
                     {
-                        var bytes = Encoding.UTF8.GetBytes(handler.Output.ToString());
-                        return stream.WriteAsync(bytes, 0, bytes.Length);
+                        var s = handler.Output.ToString();
+                        var continueWith = Application.CallActions(s, context)
+                            .ContinueWith(task =>
+                            {
+                                var bytes = Encoding.UTF8.GetBytes(task.Result);
+                                return stream.WriteAsync(bytes, 0, bytes.Length);
+                            });
+                        return continueWith.Unwrap();
                     };
             }
         }

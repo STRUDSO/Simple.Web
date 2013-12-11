@@ -1,4 +1,7 @@
-﻿namespace Simple.Web.Razor
+﻿using System.Text.RegularExpressions;
+using System.Linq;
+
+namespace Simple.Web.Razor
 {
     using System;
     using System.Collections.Generic;
@@ -32,14 +35,20 @@
                 throw new ViewNotFoundException();
             }
 
-            byte[] buffer;
+            string output;
             using (var writer = new StringWriter())
             {
                 RenderView(content, writer, viewType);
-                buffer = Encoding.UTF8.GetBytes(writer.ToString());
+                output = writer.ToString();
             }
+            return Application
+                .CallActions(output, content.Context)
+                .ContinueWith(task =>
+                    {
+                        byte[] buffer = Encoding.UTF8.GetBytes(task.Result);
+                        return outputStream.WriteAsync(buffer, 0, buffer.Length);
+                    }).Unwrap();
 
-            return outputStream.WriteAsync(buffer, 0, buffer.Length);
         }
 
         internal static void RenderView(IContent content, TextWriter textWriter, Type viewType)

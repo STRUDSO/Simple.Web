@@ -1,4 +1,6 @@
-﻿namespace Simple.Web
+﻿using System.Text.RegularExpressions;
+
+namespace Simple.Web
 {
     using System;
     using System.Collections.Concurrent;
@@ -83,8 +85,8 @@
                 {
                     context.Response.EnsureContentTypeCharset();
 
-                    env.Add(OwinKeys.StatusCode, context.Response.Status.Code);
-                    env.Add(OwinKeys.ReasonPhrase, context.Response.Status.Description);
+                    env[OwinKeys.StatusCode] = context.Response.Status.Code;
+                    env[OwinKeys.ReasonPhrase] = context.Response.Status.Description;
 
                     if (context.Response.Headers != null)
                     {
@@ -189,6 +191,43 @@
         private static RoutingTable TableFor(string httpMethod)
         {
             return RoutingTables.GetOrAdd(httpMethod, BuildRoutingTable);
+        }
+
+        public static Task<string> CallActions(string s, IContext context)
+        {
+            var regex = new Regex(@"@Action\((?<action>.*?)\)");
+            var actions =
+                regex.Matches(s)
+                     .OfType<Match>()
+                     .Select((x, i) => new {Path = x.Groups["action"].Value, i})
+                     .ToDictionary(x => x, _ =>
+                         {
+                             var dictionary = context.Variables.ToDictionary(x => x.Key, x => x.Value);
+                             dictionary[OwinKeys.Path] = _.Path;
+                             var stream = new MemoryStream();
+                             dictionary[OwinKeys.ResponseBody] = stream;
+                             return new {stream, Task = Run(dictionary, null)};
+                         });
+
+            if (!actions.Any())
+                return Task.Factory.StartNew(() => s);
+
+            var continueWhenAll = Task.Factory.ContinueWhenAll(actions.Select(x => x.Value.Task).ToArray(), _ => _)
+                .ContinueWith(_ => {
+                    int j = 0;
+                    var replace = regex.Replace(s, x =>
+                        {
+                            var value = x.Groups["action"].Value;
+                            var memoryStream = actions[new {Path = value, i = j++}].stream;
+                            memoryStream.Position = 0;
+                            var readToEnd = new StreamReader(memoryStream).ReadToEnd();
+                            if(string.IsNullOrEmpty(readToEnd))
+                                throw new ApplicationException("Foo");
+                            return readToEnd;
+                        });
+                    return replace;
+                });
+            return continueWhenAll;
         }
     }
 }

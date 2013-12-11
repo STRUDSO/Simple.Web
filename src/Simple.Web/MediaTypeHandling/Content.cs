@@ -1,3 +1,5 @@
+using Simple.Web.Http;
+
 namespace Simple.Web.MediaTypeHandling
 {
     using System;
@@ -14,8 +16,9 @@ namespace Simple.Web.MediaTypeHandling
         private readonly object _handler;
         private readonly object _model;
 
-        public Content(Uri uri, object handler, object model)
+        public Content(Uri uri, object handler, object model, IContext context = null)
         {
+            Context = context;
             _uri = uri;
             _handler = handler;
             _model = model;
@@ -62,5 +65,7 @@ namespace Simple.Web.MediaTypeHandling
         {
             get { return _uri; }
         }
+
+        public IContext Context { get; private set; }
     }
 }

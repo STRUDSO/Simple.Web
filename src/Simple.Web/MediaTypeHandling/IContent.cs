@@ -1,3 +1,5 @@
+using Simple.Web.Http;
+
 namespace Simple.Web.MediaTypeHandling
 {
     using System;
@@ -32,6 +34,8 @@ namespace Simple.Web.MediaTypeHandling
         /// <summary>
         /// Gets the links which are valid for the model type, based on the <see cref="LinksFromAttribute"/> on handlers.
         /// </summary>
-        IEnumerable<Link> Links { get; } 
+        IEnumerable<Link> Links { get; }
+
+        IContext Context { get; }
     }
 }

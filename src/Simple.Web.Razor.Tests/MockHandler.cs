@@ -1,3 +1,5 @@
+using Simple.Web.Http;
+
 namespace Simple.Web.Razor.Tests
 {
     using System;
@@ -25,5 +27,7 @@ namespace Simple.Web.Razor.Tests
         {
             get { return Enumerable.Empty<Link>(); }
         }
+
+        public IContext Context { get; private set; }
     }
 }

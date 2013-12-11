@@ -40,7 +40,7 @@ namespace Simple.Web.Behaviors.Implementations
 
                 context.Response.WriteFunction = (stream) => handler.Output.ContinueWith(t =>
                     {
-                        var content = new Content(context.Request.Url, handler, t.Result);
+                        var content = new Content(context.Request.Url, handler, t.Result, context);
                         return mediaTypeHandler.Write<T>(content, stream);
                     }).Unwrap();
             }
